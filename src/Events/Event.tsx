@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 export interface EventProps {
-  eventId: number;
+  eventId: string;
   eventName: string;
   eventDate: string;
   startDateTime: string;
@@ -15,11 +15,11 @@ export interface EventProps {
 
 const Event: React.FC<{
   eventItem: EventProps;
-  deleteEvent: (eventId: number) => void;
+  deleteEvent: (eventId: string) => void;
 }> = ({ eventItem, deleteEvent }) => {
   const navigate = useNavigate();
 
-  const updateHandler = (eventId: number) => {
+  const updateHandler = (eventId: string) => {
     navigate(`/update/${eventId}`);
   };
 

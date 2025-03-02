@@ -1,46 +1,25 @@
 import React from "react";
+import { NotificationType } from "../App";
 import { Button, Modal, notification } from "antd";
 import EventForm from "./EventForm";
-import { type MainPageProps } from "../MainPage/MainPage";
 
-interface CreateEventBlockProps extends MainPageProps {
+interface CreateEventBlockProps {
   isModalOpen: boolean;
   modalHandler: (modalState: boolean) => void;
+  openNotification: (
+    message: string,
+    description: string,
+    type: NotificationType
+  ) => void;
 }
 
 const CreateEventModalBlock: React.FC<CreateEventBlockProps> = ({
-  selectedDate,
   isModalOpen,
-  currentEvent,
-  updateLocalEvent,
   modalHandler,
-  createEvent,
+  openNotification,
 }) => {
-  const [api, contextHolder] = notification.useNotification();
-
-  const openNotification = () => {
-    api["success"]({
-      message: `Событие создано`,
-      placement: "top",
-    });
-  };
-
   const showModal = () => {
     modalHandler(true);
-  };
-
-  const handleOk = () => {
-    // timestamp в качестве уникального айди для тестового проекта
-    const timestamp = new Date().getTime();
-    const newEvent = {
-      ...currentEvent,
-      eventDate: selectedDate,
-      eventId: timestamp,
-    };
-
-    createEvent(newEvent);
-    openNotification();
-    modalHandler(false);
   };
 
   const handleCancel = () => {
@@ -49,23 +28,21 @@ const CreateEventModalBlock: React.FC<CreateEventBlockProps> = ({
 
   return (
     <div className="create-event__button">
-      {contextHolder}
       <Button color="primary" variant="solid" onClick={showModal}>
         +
       </Button>
       <Modal
         title="New event"
         open={isModalOpen}
-        onOk={handleOk}
+        onOk={() => {}}
         onCancel={handleCancel}
+        footer={[]}
         destroyOnClose={true}
       >
         <EventForm
           fromModal={true}
-          selectedDate={selectedDate}
-          currentEvent={currentEvent}
-          updateLocalEvent={updateLocalEvent}
-          onSaveHandler={() => {}}
+          closeModal={handleCancel}
+          openNotification={openNotification}
         />
       </Modal>
     </div>

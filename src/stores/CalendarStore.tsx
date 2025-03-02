@@ -1,4 +1,5 @@
 import { EventProps } from "../Events/Event";
+import dayjs from "dayjs";
 import { DateTime } from "luxon";
 import { makeAutoObservable } from "mobx";
 
@@ -12,6 +13,7 @@ const formatTime = (dateTime: string) => {
 
 class CalendarStore {
   storedEvents: EventProps[] = [];
+  selectedDate: string = dayjs(new Date()).format("YYYY-MM-DD");
 
   constructor() {
     makeAutoObservable(this);
@@ -30,23 +32,33 @@ class CalendarStore {
         })
         .toString();
     }
-    // ререндер происходит засчет изменения локального стейта, поэтому здесь меняем исходный массив
-    this.storedEvents.push(event);
+
+    this.storedEvents = [...this.storedEvents, event];
     this.saveToLocalStorage();
   };
 
-  updateEvent = (eventId: number, newEvent: EventProps) => {
+  updateEvent = (eventId: string, newEvent: EventProps) => {
     this.deleteEvent(eventId);
     this.createEvent(newEvent);
     this.saveToLocalStorage();
   };
 
-  deleteEvent = (eventId: number) => {
+  deleteEvent = (eventId: string) => {
     // перезаписываем стейт для того чтобы перерендерился календарь и список событий
     this.storedEvents = this.storedEvents.filter(
       (el) => el.eventId !== eventId
     );
     this.saveToLocalStorage();
+  };
+
+  changeSelectedDate = (newDate: string) => {
+    this.selectedDate = newDate;
+  };
+
+  getCurrentEvent = (eventId: string): EventProps | undefined => {
+    if (!eventId) return;
+    const idx = this.storedEvents.findIndex((item) => item.eventId === eventId);
+    return this.storedEvents[idx];
   };
 
   saveToLocalStorage() {
@@ -61,4 +73,4 @@ class CalendarStore {
   }
 }
 
-export default new CalendarStore();
+export default CalendarStore;

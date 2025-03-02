@@ -1,30 +1,59 @@
-import React, { useState } from "react";
-import { Button } from "antd";
+import React, { useState, useEffect } from "react";
+import { Button, notification } from "antd";
 import CreateEventModalBlock from "../Events/CreateEventModalBlock";
 import EventList from "../Events/EventList";
 import MyCalendar from "../Calendar/Calendar";
-import { type EventProps } from "../Events/Event";
 import { useNavigate } from "react-router-dom";
-import { UpdateEventFields } from "../App";
+import { useStore } from "../stores/CalendarStoreProvider";
+import dayjs from "dayjs";
+import { NotificationType } from "../App";
 
-export interface MainPageProps {
-  selectedDate: string;
-  storedEvents: EventProps[];
-  currentEvent: EventProps;
-  updateLocalEvent: (updatedFields: UpdateEventFields) => void;
-  createEvent: (event: EventProps) => void;
-  deleteEvent: (eventId: number) => void;
-  dateChangeHandler: (date: string) => void;
-}
-
-const MainPage: React.FC<MainPageProps> = (props) => {
-  const { selectedDate, storedEvents, deleteEvent, dateChangeHandler } = props;
+const MainPage: React.FC<{
+  openNotification: (
+    message: string,
+    description: string,
+    type: NotificationType
+  ) => void;
+}> = ({ openNotification }) => {
+  const { storedEvents } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const modalHandler = (modalState: boolean) => {
     setIsModalOpen(modalState);
   };
+
+  /*
+    Пока страница открыта раз в минуту запускается проверка на наличие 
+    "приближающихся" событий, о которых необходимо уведомить
+    Значения выбраны комфортные для тестирования приложения 
+*/
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const futureEvents = storedEvents.filter((item) => {
+        return item.reminderTime && new Date(item.reminderTime) > new Date();
+      });
+      console.log(futureEvents);
+      for (let event of futureEvents) {
+        const timeDiff = dayjs(new Date(event.reminderTime ?? 0)).diff(
+          dayjs(new Date())
+        );
+        console.log(timeDiff);
+        if (timeDiff <= 60000) {
+          setTimeout(() => {
+            openNotification(
+              "Уведомление",
+              `У вас запланировано событие ${event.eventName} с ${
+                event?.startTime ?? ""
+              } по ${event?.endTime ?? ""}`,
+              "info"
+            );
+          }, timeDiff);
+        }
+      }
+    }, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <>
@@ -39,21 +68,13 @@ const MainPage: React.FC<MainPageProps> = (props) => {
           Новое событие
         </Button>
         <CreateEventModalBlock
-          {...props}
           isModalOpen={isModalOpen}
           modalHandler={modalHandler}
+          openNotification={openNotification}
         />
       </div>
-      <EventList
-        selectedDate={selectedDate}
-        storedEvents={storedEvents}
-        deleteEvent={deleteEvent}
-      />
-      <MyCalendar
-        storedEvents={storedEvents}
-        selectedDate={selectedDate}
-        dateChangeHandler={dateChangeHandler}
-      />
+      <EventList />
+      <MyCalendar />
     </>
   );
 };

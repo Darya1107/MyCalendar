@@ -1,58 +1,92 @@
-import React, { useEffect } from "react";
-import { TimePicker, Select, Input, Button } from "antd";
+import React, { useState } from "react";
+import { TimePicker, Select, Input, Button, SelectProps } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { type UpdateEventFields } from "../App";
 import { useNavigate } from "react-router-dom";
-import { EventProps } from "./Event";
-import CalendarStore from "../stores/CalendarStore";
-import { observer } from "mobx-react-lite";
+import { type EventProps } from "./Event";
+import { useStore } from "../stores/CalendarStoreProvider";
+import { NotificationType } from "../App";
 
 const time_format = "HH:mm";
+const selectOptions = [
+  { value: "5", label: "5" },
+  { value: "10", label: "10" },
+  { value: "15", label: "15" },
+  { value: "30", label: "30" },
+];
+type LabelRender = SelectProps["labelRender"];
 
-interface EventFormProps {
-  fromModal: boolean;
-  selectedDate: string;
-  currentEvent: EventProps;
-  updateLocalEvent: (updateFields: UpdateEventFields) => void;
-  onSaveHandler: (eventId?: number) => void;
-}
+const EventForm: React.FC<{
+  fromModal?: boolean;
+  closeModal?: () => void;
+  openNotification: (
+    message: string,
+    description: string,
+    type: NotificationType
+  ) => void;
+}> = ({ fromModal, closeModal, openNotification }) => {
+  const { selectedDate, getCurrentEvent, createEvent, updateEvent } =
+    useStore();
+  const eventId = window.location.pathname.split("/")[2];
+  const currentEvent = getCurrentEvent(eventId) || {
+    eventId: "",
+    eventName: "",
+    eventDate: "",
+    startDateTime: "",
+    endDateTime: "",
+  };
 
-const EventForm: React.FC<EventFormProps> = observer((props) => {
-  const {
-    fromModal,
-    selectedDate,
-    currentEvent,
-    updateLocalEvent,
-    onSaveHandler,
-  } = props;
-  const { storedEvents, createEvent, updateEvent } = CalendarStore;
-
+  const [localEvent, setLocalEvent] = useState<EventProps>(currentEvent);
   const navigate = useNavigate();
 
   const getActualDateTime = (target: Dayjs) =>
     selectedDate + "T" + target.toISOString().split("T")[1];
-  let editEvent: EventProps | undefined;
-  let eventId: number;
 
-  if (window.location.pathname.indexOf("update") !== -1) {
-    eventId = Number(window.location.pathname.split("/")[2]);
-    const idx = storedEvents.findIndex((item) => item.eventId === eventId);
-    editEvent = { ...storedEvents[idx] };
-  }
+  const onSaveHandler = (eventId?: string) => {
+    if (eventId) {
+      updateEvent(eventId, {
+        ...localEvent,
+        eventId,
+        eventDate: selectedDate,
+      });
+      openNotification("Событие отредактировано!", "", "success");
+    } else {
+      // timestamp в качестве уникального айди для тестового проекта
+      const timestamp = new Date().getTime();
+      const newEvent = {
+        ...localEvent,
+        eventDate: selectedDate,
+        eventId: timestamp.toString(),
+      };
 
-  useEffect(() => {
-    if (eventId && editEvent) {
-      updateLocalEvent({ ...editEvent });
+      createEvent(newEvent);
+      openNotification("Событие создано!", "", "success");
     }
-  }, []);
+  };
+
+  const labelRender: LabelRender = (props) => {
+    const { label, value } = props;
+
+    if (label) {
+      return value;
+    }
+    return <span></span>;
+  };
+
+  const closeHandler = () => {
+    if (closeModal) closeModal();
+    else navigate("/");
+  };
 
   return (
     <div className="create-event-form">
       <div>
         <Input
-          value={editEvent?.eventName}
+          value={localEvent.eventName}
           onChange={(target) => {
-            updateLocalEvent({ eventName: target.target.value });
+            setLocalEvent((prev) => ({
+              ...prev,
+              eventName: target.target.value,
+            }));
           }}
           placeholder="Basic usage"
         />
@@ -61,9 +95,12 @@ const EventForm: React.FC<EventFormProps> = observer((props) => {
         <span>Начало:</span>
         <TimePicker
           onChange={(target) => {
-            updateLocalEvent({ startDateTime: getActualDateTime(target) });
+            setLocalEvent((prev) => ({
+              ...prev,
+              startDateTime: getActualDateTime(target),
+            }));
           }}
-          defaultValue={dayjs(editEvent?.startTime ?? "00:00", time_format)}
+          defaultValue={dayjs(localEvent.startTime ?? "00:00", time_format)}
           format={time_format}
           needConfirm={false}
         />
@@ -72,9 +109,12 @@ const EventForm: React.FC<EventFormProps> = observer((props) => {
         <span>Завершение:</span>
         <TimePicker
           onChange={(target) => {
-            updateLocalEvent({ endDateTime: getActualDateTime(target) });
+            setLocalEvent((prev) => ({
+              ...prev,
+              endDateTime: getActualDateTime(target),
+            }));
           }}
-          defaultValue={dayjs(editEvent?.endTime ?? "00:00", time_format)}
+          defaultValue={dayjs(localEvent.endTime ?? "00:00", time_format)}
           format={time_format}
           needConfirm={false}
         />
@@ -82,44 +122,40 @@ const EventForm: React.FC<EventFormProps> = observer((props) => {
       <div className="create-event-form__field">
         <span>Напомнить за</span>
         <Select
+          labelRender={labelRender}
+          defaultValue={localEvent.remindIn}
           style={{ width: 60 }}
           onChange={(target) => {
-            updateLocalEvent({ remindIn: target.valueOf() });
+            setLocalEvent((prev) => ({
+              ...prev,
+              remindIn: target.valueOf(),
+            }));
           }}
-          options={[
-            { value: "5", label: "5" },
-            { value: "10", label: "10" },
-            { value: "15", label: "15" },
-            { value: "30", label: "30" },
-          ]}
+          options={selectOptions}
         />
         <span>минут</span>
       </div>
-      {fromModal ? null : (
-        <div className="create-event-form__buttons">
-          <Button
-            color="primary"
-            variant="solid"
-            onClick={() => {
-              navigate("/");
-            }}
-          >
-            Назад
-          </Button>
-          <Button
-            color="primary"
-            variant="solid"
-            onClick={() => {
-              onSaveHandler(eventId);
-              navigate("/");
-            }}
-          >
-            Сохранить
-          </Button>
-        </div>
-      )}
+      <div
+        className={`create-event-form__buttons${
+          fromModal ? " create-event-form__buttons_modal" : ""
+        }`}
+      >
+        <Button color="primary" variant="solid" onClick={closeHandler}>
+          Назад
+        </Button>
+        <Button
+          color="primary"
+          variant="solid"
+          onClick={() => {
+            onSaveHandler(eventId);
+            closeHandler();
+          }}
+        >
+          Сохранить
+        </Button>
+      </div>
     </div>
   );
-});
+};
 
 export default EventForm;

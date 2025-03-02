@@ -1,17 +1,11 @@
 import React from "react";
-import Event, { type EventProps } from "./Event";
+import { useStore } from "../stores/CalendarStoreProvider";
+import Event from "./Event";
+import { observer } from "mobx-react-lite";
 
-interface EventListProps {
-  selectedDate: string;
-  storedEvents: EventProps[];
-  deleteEvent: (eventId: number) => void;
-}
+const EventList: React.FC<{}> = observer(() => {
+  const { selectedDate, storedEvents, deleteEvent } = useStore();
 
-const EventList: React.FC<EventListProps> = ({
-  selectedDate,
-  storedEvents,
-  deleteEvent,
-}) => {
   const selectedDayEvents = storedEvents.filter(
     (el) => el.eventDate === selectedDate
   );
@@ -31,6 +25,6 @@ const EventList: React.FC<EventListProps> = ({
         : null}
     </div>
   );
-};
+});
 
 export default EventList;

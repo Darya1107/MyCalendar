@@ -20,6 +20,11 @@
     > button {
       margin-right: 5px;
     }
+
+    &_modal {
+      display: flex;
+      justify-content: flex-end;
+    }
   }
 }
 

@@ -1,13 +1,11 @@
 import React from "react";
 import { Badge, CalendarProps, Calendar } from "antd";
 import dayjs, { Dayjs } from "dayjs";
-import { EventProps } from "../Events/Event";
+import { observer } from "mobx-react-lite";
+import { useStore } from "../stores/CalendarStoreProvider";
 
-const MyCalendar: React.FC<{
-  storedEvents: EventProps[];
-  selectedDate: string;
-  dateChangeHandler: (date: string) => void;
-}> = ({ storedEvents, selectedDate, dateChangeHandler }) => {
+const MyCalendar: React.FC<{}> = observer(() => {
+  const { storedEvents, selectedDate, changeSelectedDate } = useStore();
   const monthCellRender = (value: Dayjs) => {
     const countEvents = storedEvents.filter(
       (el) => new Date(el.eventDate).getMonth() === value.month()
@@ -33,13 +31,18 @@ const MyCalendar: React.FC<{
     );
   };
   const cellRender: CalendarProps<Dayjs>["cellRender"] = (current, info) => {
-    if (info.type === "date") return dateCellRender(current);
-    if (info.type === "month") return monthCellRender(current);
-    return info.originNode;
+    switch (info.type) {
+      case "date":
+        return dateCellRender(current);
+      case "month":
+        return monthCellRender(current);
+      default:
+        return info.originNode;
+    }
   };
 
   const onSelectHandler = (newValue: Dayjs) => {
-    dateChangeHandler(newValue.format("YYYY-MM-DD"));
+    changeSelectedDate(newValue.format("YYYY-MM-DD"));
   };
   return (
     <Calendar
@@ -48,6 +51,6 @@ const MyCalendar: React.FC<{
       onSelect={onSelectHandler}
     />
   );
-};
+});
 
 export default MyCalendar;
